@@ -285,7 +285,7 @@ if ((await RaspShield.checkFrida()).isDetected) {
 
 ```yaml
 dependencies:
-  flutter_neo_shield: ^0.1.0
+  flutter_neo_shield: ^0.4.1
 ```
 
 **Step 2:** Run:
