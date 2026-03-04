@@ -1,3 +1,11 @@
+## 0.4.0
+
+* **New Module:** RASP Shield (Runtime App Self Protection)
+* Added Android & iOS native runtime security detections.
+* Features include: `checkDebugger()`, `checkRoot()`, `checkEmulator()`, `checkFrida()`, `checkHooks()`, and `checkIntegrity()`.
+* Call `RaspShield.fullSecurityScan()` to retrieve a full `SecurityReport`.
+* Reorganized imports for modular access.
+
 ## 0.3.0
 
 * Added full platform support for Web, macOS, Windows, and Linux.

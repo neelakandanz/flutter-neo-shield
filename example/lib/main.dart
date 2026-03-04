@@ -5,6 +5,7 @@ import 'screens/clipboard_shield_demo.dart';
 import 'screens/log_shield_demo.dart';
 import 'screens/memory_shield_demo.dart';
 import 'screens/string_shield_demo.dart';
+import 'screens/rasp_shield_demo.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,6 +68,7 @@ class _HomePageState extends State<HomePage> {
     ClipboardShieldDemo(),
     MemoryShieldDemo(),
     StringShieldDemo(),
+    RaspShieldDemo(),
   ];
 
   final _titles = const [
@@ -74,6 +76,7 @@ class _HomePageState extends State<HomePage> {
     'Clipboard Shield',
     'Memory Shield',
     'String Shield',
+    'RASP Shield',
   ];
 
   @override
@@ -109,6 +112,11 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.shield_outlined),
             selectedIcon: Icon(Icons.shield),
             label: 'String',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.gpp_good_outlined),
+            selectedIcon: Icon(Icons.gpp_good),
+            label: 'RASP',
           ),
         ],
       ),

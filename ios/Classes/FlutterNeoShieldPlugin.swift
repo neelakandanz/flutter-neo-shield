@@ -9,12 +9,17 @@ public class FlutterNeoShieldPlugin: NSObject, FlutterPlugin {
     private var secureStorage: [String: Data] = [:]
 
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(
+        let memoryChannel = FlutterMethodChannel(
             name: "com.neelakandan.flutter_neo_shield/memory",
             binaryMessenger: registrar.messenger()
         )
+        let raspChannel = FlutterMethodChannel(
+            name: "com.neelakandan.flutter_neo_shield/rasp",
+            binaryMessenger: registrar.messenger()
+        )
         let instance = FlutterNeoShieldPlugin()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+        registrar.addMethodCallDelegate(instance, channel: memoryChannel)
+        registrar.addMethodCallDelegate(instance, channel: raspChannel)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -61,6 +66,25 @@ public class FlutterNeoShieldPlugin: NSObject, FlutterPlugin {
             wipeAll()
             result(nil)
 
+        // RASP Shield
+        case "checkDebugger":
+            result(DebuggerDetector.check())
+            
+        case "checkRoot":
+            result(JailbreakDetector.check())
+
+        case "checkEmulator":
+            result(EmulatorDetector.check())
+
+        case "checkHooks":
+            result(HookDetector.check())
+
+        case "checkFrida":
+            result(FridaDetector.check())
+
+        case "checkIntegrity":
+            result(IntegrityDetector.check())
+        
         default:
             result(FlutterMethodNotImplemented)
         }

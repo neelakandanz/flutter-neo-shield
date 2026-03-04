@@ -42,8 +42,7 @@ void main() {
       });
 
       test('handles empty string', () {
-        final result =
-            Deobfuscator.xor(Uint8List(0), Uint8List.fromList([1]));
+        final result = Deobfuscator.xor(Uint8List(0), Uint8List.fromList([1]));
         expect(result, equals(''));
       });
 

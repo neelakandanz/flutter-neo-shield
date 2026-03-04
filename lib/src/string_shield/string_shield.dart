@@ -96,8 +96,7 @@ class StringShield {
   void recordAccess(String fieldKey) {
     if (_config.enableStats) {
       _deobfuscationCount++;
-      _fieldAccessCounts[fieldKey] =
-          (_fieldAccessCounts[fieldKey] ?? 0) + 1;
+      _fieldAccessCounts[fieldKey] = (_fieldAccessCounts[fieldKey] ?? 0) + 1;
     }
   }
 

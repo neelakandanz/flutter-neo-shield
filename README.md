@@ -21,7 +21,7 @@ PII = **Personally Identifiable Information**. Things like:
 
 If any of this data leaks (through logs, clipboard, or memory), it's a security risk.
 
-**flutter_neo_shield has 4 modules to prevent this:**
+**flutter_neo_shield has 5 modules to prevent this:**
 
 | Module | What it does (in one line) |
 |--------|---------------------------|
@@ -29,6 +29,7 @@ If any of this data leaks (through logs, clipboard, or memory), it's a security 
 | **Clipboard Shield** | When users copy sensitive text, it auto-deletes from clipboard after X seconds |
 | **Memory Shield** | Stores secrets as bytes and overwrites them with zeros when you're done |
 | **String Shield** | Encrypts string literals at compile time so they can't be extracted from your binary with `strings` |
+| **RASP Shield** | Detects Root, Jailbreak, Debugger, Emulator, Frida, and Tampering at runtime to block attackers |
 
 ---
 
@@ -235,6 +236,47 @@ Then run: `dart run build_runner build`
 
 ---
 
+### 5. RASP Shield — "Runtime App Self Protection"
+
+**The problem:**
+
+Attackers often install your app on a rooted device or emulator, attach a debugger, or inject tools like [Frida](https://frida.re/) to hook into your app's memory and steal API keys or bypass paywalls.
+
+**How RASP Shield fixes it:**
+
+It detects these hostile environments so you can restrict features, clear sensitive data, or crash the app.
+
+```dart
+import 'package:flutter_neo_shield/rasp_shield.dart';
+
+// Perform a full security scan on startup:
+final report = await RaspShield.fullSecurityScan();
+
+if (!report.isSafe) {
+  print('SECURITY WARNING: Unsafe environment detected!');
+  
+  if (report.debuggerDetected) print('Debugger attached!');
+  if (report.rootDetected) print('Device is rooted/jailbroken!');
+  if (report.emulatorDetected) print('Running on emulator!');
+  if (report.fridaDetected) print('Frida instrumentation detected!');
+  if (report.hookDetected) print('Hooking framework (Substrate/Xposed) detected!');
+  if (report.integrityTampered) print('App binary was tampered/sideloaded!');
+  
+  // Example: exit the app or force logout
+  // exit(0);
+}
+```
+
+You can also run independent checks before sensitive actions (like processing a payment):
+
+```dart
+if ((await RaspShield.checkFrida()).isDetected) {
+  throw Exception("Payment blocked: Security risk.");
+}
+```
+
+---
+
 ## Installation
 
 **Step 1:** Add to `pubspec.yaml`:
@@ -277,6 +319,12 @@ final secret = SecureString('my-api-key');
 // Protect strings in compiled binary:
 // (see String Shield section above for full setup)
 final url = $AppSecrets.apiUrl;  // decrypted at runtime
+
+// Check if device is safe (RASP):
+final report = await RaspShield.fullSecurityScan();
+if (!report.isSafe) {
+  // exit or restrict user
+}
 ```
 
 ---
@@ -330,7 +378,7 @@ A: **No.** You need to replace `print()` with `shieldLog()` in your code. It's a
 
 A: It **doesn't** hide data during development! By default, `shieldLog()` shows all real values in debug mode. Sanitization only kicks in automatically in release builds. You write the code once, and it does the right thing in each mode.
 
-**Q: Do I need to use all 4 modules?**
+**Q: Do I need to use all 5 modules?**
 
 A: No. Use only what you need. You can import just one module:
 
@@ -339,6 +387,7 @@ import 'package:flutter_neo_shield/log_shield.dart';       // Only Log Shield
 import 'package:flutter_neo_shield/clipboard_shield.dart';  // Only Clipboard Shield
 import 'package:flutter_neo_shield/memory_shield.dart';     // Only Memory Shield
 import 'package:flutter_neo_shield/string_shield.dart';     // Only String Shield
+import 'package:flutter_neo_shield/rasp_shield.dart';       // Only RASP Shield
 ```
 
 **Q: Does this send my data to any server?**
@@ -433,14 +482,14 @@ See the [Dio integration file](https://github.com/neelakandanz/flutter-neo-shiel
 
 ## Platform Support
 
-| Platform | Log Shield | Clipboard Shield | Memory Shield | String Shield |
-|----------|:----------:|:----------------:|:-------------:|:-------------:|
-| Android | Yes | Yes | Yes (native wipe) | Yes |
-| iOS | Yes | Yes | Yes (native wipe) | Yes |
-| Web | Yes | Yes | Yes (Dart fallback) | Yes |
-| macOS | Yes | Yes | Yes (Dart fallback) | Yes |
-| Windows | Yes | Yes | Yes (Dart fallback) | Yes |
-| Linux | Yes | Yes | Yes (Dart fallback) | Yes |
+| Platform | Log Shield | Clipboard Shield | Memory Shield | String Shield | RASP Shield |
+|----------|:----------:|:----------------:|:-------------:|:-------------:|:-----------:|
+| Android | Yes | Yes | Yes (native wipe) | Yes | Yes |
+| iOS | Yes | Yes | Yes (native wipe) | Yes | Yes |
+| Web | Yes | Yes | Yes (Dart fallback) | Yes | No |
+| macOS | Yes | Yes | Yes (Dart fallback) | Yes | No |
+| Windows | Yes | Yes | Yes (Dart fallback) | Yes | No |
+| Linux | Yes | Yes | Yes (Dart fallback) | Yes | No |
 
 ---
 

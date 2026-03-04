@@ -46,8 +46,7 @@ void main() {
     });
 
     test('accepts enhancedXor strategy', () {
-      const annotation =
-          Obfuscate(strategy: ObfuscationStrategy.enhancedXor);
+      const annotation = Obfuscate(strategy: ObfuscationStrategy.enhancedXor);
       expect(annotation.strategy, equals(ObfuscationStrategy.enhancedXor));
     });
   });

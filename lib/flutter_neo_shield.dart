@@ -49,5 +49,10 @@ export 'src/string_shield/obfuscation_strategy.dart';
 export 'src/string_shield/string_shield.dart';
 export 'src/string_shield/string_shield_config.dart';
 
+// RASP Shield
+export 'src/rasp/rasp_shield.dart';
+export 'src/rasp/security_mode.dart';
+export 'src/rasp/security_result.dart';
+
 // Main
 export 'src/flutter_neo_shield.dart';

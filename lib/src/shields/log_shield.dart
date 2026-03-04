@@ -12,14 +12,14 @@
 library log_shield;
 
 // Core (shared PII engine)
-export 'src/core/pii_detector.dart';
-export 'src/core/pii_pattern.dart';
-export 'src/core/pii_type.dart';
-export 'src/core/shield_config.dart';
-export 'src/core/shield_report.dart';
+export '../core/pii_detector.dart';
+export '../core/pii_pattern.dart';
+export '../core/pii_type.dart';
+export '../core/shield_config.dart';
+export '../core/shield_report.dart';
 
 // Log Shield
-export 'src/log_shield/json_sanitizer.dart';
-export 'src/log_shield/log_shield.dart';
-export 'src/log_shield/log_shield_config.dart';
-export 'src/log_shield/safe_log.dart';
+export '../log_shield/json_sanitizer.dart';
+export '../log_shield/log_shield.dart';
+export '../log_shield/log_shield_config.dart';
+export '../log_shield/safe_log.dart';

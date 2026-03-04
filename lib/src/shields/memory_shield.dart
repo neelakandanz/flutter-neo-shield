@@ -13,15 +13,15 @@
 library memory_shield;
 
 // Core (shared PII engine)
-export 'src/core/pii_detector.dart';
-export 'src/core/pii_pattern.dart';
-export 'src/core/pii_type.dart';
-export 'src/core/shield_config.dart';
-export 'src/core/shield_report.dart';
+export '../core/pii_detector.dart';
+export '../core/pii_pattern.dart';
+export '../core/pii_type.dart';
+export '../core/shield_config.dart';
+export '../core/shield_report.dart';
 
 // Memory Shield
-export 'src/memory_shield/memory_shield.dart';
-export 'src/memory_shield/memory_shield_config.dart';
-export 'src/memory_shield/secure_bytes.dart';
-export 'src/memory_shield/secure_string.dart';
-export 'src/memory_shield/secure_value.dart';
+export '../memory_shield/memory_shield.dart';
+export '../memory_shield/memory_shield_config.dart';
+export '../memory_shield/secure_bytes.dart';
+export '../memory_shield/secure_string.dart';
+export '../memory_shield/secure_value.dart';

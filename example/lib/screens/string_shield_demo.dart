@@ -136,8 +136,7 @@ class _StringShieldDemoState extends State<StringShieldDemo> {
     // Shuffle.
     final indices = List<int>.generate(chunks.length, (i) => i);
     final shuffled = List<int>.from(indices)..shuffle(random);
-    final shuffledChunks =
-        List<Uint8List>.filled(chunks.length, Uint8List(0));
+    final shuffledChunks = List<Uint8List>.filled(chunks.length, Uint8List(0));
     final order = List<int>.filled(chunks.length, 0);
     for (var i = 0; i < chunks.length; i++) {
       shuffledChunks[shuffled[i]] = chunks[i];

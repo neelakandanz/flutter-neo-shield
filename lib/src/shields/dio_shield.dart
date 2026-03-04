@@ -15,4 +15,4 @@
 /// ```
 library dio_shield;
 
-export 'src/log_shield/dio_shield_interceptor.dart';
+export '../log_shield/dio_shield_interceptor.dart';

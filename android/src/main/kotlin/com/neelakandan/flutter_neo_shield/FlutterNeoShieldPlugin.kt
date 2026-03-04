@@ -15,15 +15,24 @@ import io.flutter.plugin.common.MethodChannel.Result
  */
 class FlutterNeoShieldPlugin : FlutterPlugin, MethodCallHandler {
     private lateinit var channel: MethodChannel
+    private lateinit var raspChannel: MethodChannel
     private val secureStorage = HashMap<String, ByteArray>()
+    private val debuggerDetector = com.neelakandan.flutter_neo_shield.rasp.DebuggerDetector()
+    private var applicationContext: android.content.Context? = null
 
     override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+        applicationContext = binding.applicationContext
+        
         channel = MethodChannel(binding.binaryMessenger, "com.neelakandan.flutter_neo_shield/memory")
         channel.setMethodCallHandler(this)
+
+        raspChannel = MethodChannel(binding.binaryMessenger, "com.neelakandan.flutter_neo_shield/rasp")
+        raspChannel.setMethodCallHandler(this)
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
+            // Memory Shield
             "allocateSecure" -> {
                 val id = call.argument<String>("id")
                 val data = call.argument<ByteArray>("data")
@@ -60,6 +69,36 @@ class FlutterNeoShieldPlugin : FlutterPlugin, MethodCallHandler {
                 secureStorage.clear()
                 result.success(null)
             }
+            
+            // RASP Shield
+            "checkDebugger" -> {
+                result.success(debuggerDetector.check())
+            }
+            "checkRoot" -> {
+                result.success(com.neelakandan.flutter_neo_shield.rasp.RootDetector().check())
+            }
+            "checkEmulator" -> {
+                result.success(com.neelakandan.flutter_neo_shield.rasp.EmulatorDetector().check())
+            }
+            "checkHooks" -> {
+                val context = applicationContext
+                if (context != null) {
+                    result.success(com.neelakandan.flutter_neo_shield.rasp.HookDetector().check(context))
+                } else {
+                    result.success(false)
+                }
+            }
+            "checkFrida" -> {
+                result.success(com.neelakandan.flutter_neo_shield.rasp.FridaDetector().check())
+            }
+            "checkIntegrity" -> {
+                val context = applicationContext
+                if (context != null) {
+                    result.success(com.neelakandan.flutter_neo_shield.rasp.IntegrityDetector().check(context))
+                } else {
+                    result.success(false)
+                }
+            }
             else -> {
                 result.notImplemented()
             }
@@ -73,5 +112,6 @@ class FlutterNeoShieldPlugin : FlutterPlugin, MethodCallHandler {
         }
         secureStorage.clear()
         channel.setMethodCallHandler(null)
+        raspChannel.setMethodCallHandler(null)
     }
 }

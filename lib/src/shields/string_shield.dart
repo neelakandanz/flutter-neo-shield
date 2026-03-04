@@ -21,15 +21,15 @@
 library string_shield;
 
 // Core (shared PII engine)
-export 'src/core/pii_detector.dart';
-export 'src/core/pii_pattern.dart';
-export 'src/core/pii_type.dart';
-export 'src/core/shield_config.dart';
-export 'src/core/shield_report.dart';
+export '../core/pii_detector.dart';
+export '../core/pii_pattern.dart';
+export '../core/pii_type.dart';
+export '../core/shield_config.dart';
+export '../core/shield_report.dart';
 
 // String Shield
-export 'src/string_shield/annotations.dart';
-export 'src/string_shield/deobfuscator.dart';
-export 'src/string_shield/obfuscation_strategy.dart';
-export 'src/string_shield/string_shield.dart';
-export 'src/string_shield/string_shield_config.dart';
+export '../string_shield/annotations.dart';
+export '../string_shield/deobfuscator.dart';
+export '../string_shield/obfuscation_strategy.dart';
+export '../string_shield/string_shield.dart';
+export '../string_shield/string_shield_config.dart';
