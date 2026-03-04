@@ -1,3 +1,9 @@
+## 0.2.1
+
+* Fixed pub.dev static analysis warnings.
+* Broadened dependency constraints to support the latest analyzer and build versions.
+* Shortened package description to meet pub.dev requirements.
+
 ## 0.2.0
 
 * String Shield: compile-time string obfuscation with @Obfuscate() annotation
