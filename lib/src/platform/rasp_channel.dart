@@ -9,11 +9,24 @@ class RaspChannel {
   static const MethodChannel _channel =
       MethodChannel('com.neelakandan.flutter_neo_shield/rasp');
 
+  static bool _failClosed = true;
+  static bool _configured = false;
+
   /// Whether to fail closed (return true = detected) on platform errors.
   ///
-  /// Defaults to true for security. Set to false only in development
-  /// when native plugins are not yet integrated.
-  static bool failClosed = true;
+  /// Defaults to true for security. Use [configure] to change this
+  /// value before any checks are performed.
+  static bool get failClosed => _failClosed;
+
+  /// Configures the fail-closed behavior. Can only be called once.
+  ///
+  /// Set [failClosed] to false only in development when native plugins
+  /// are not yet integrated.
+  static void configure({required bool failClosed}) {
+    if (_configured) return;
+    _configured = true;
+    _failClosed = failClosed;
+  }
 
   /// Invoke a native detection method.
   ///
@@ -24,18 +37,24 @@ class RaspChannel {
       [Map<String, dynamic>? arguments]) async {
     try {
       final result = await _channel.invokeMethod<bool>(method, arguments);
-      return result ?? failClosed;
+      return result ?? _failClosed;
     } on MissingPluginException {
       developer.log(
         '$method: native plugin not registered — '
-        '${failClosed ? "reporting as detected (fail-closed)" : "reporting as safe (fail-open)"}',
+        '${_failClosed ? "reporting as detected (fail-closed)" : "reporting as safe (fail-open)"}',
         name: 'RaspChannel',
       );
-      return failClosed;
+      return _failClosed;
     } on PlatformException catch (e) {
       developer.log('Failed to execute $method: ${e.message}',
           name: 'RaspChannel');
-      return failClosed;
+      return _failClosed;
     }
+  }
+
+  /// Resets configuration state. Only for testing.
+  static void resetForTesting() {
+    _failClosed = true;
+    _configured = false;
   }
 }

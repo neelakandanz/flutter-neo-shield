@@ -6,13 +6,16 @@ import java.util.Scanner
 
 class FridaDetector {
     fun check(): Boolean {
-        // 1. Check for Frida default port (27042 is default frida-server port)
-        try {
-            Socket("127.0.0.1", 27042).use {
-                return true
+        // 1. Check for Frida on common ports
+        val fridaPorts = intArrayOf(27042, 27043, 4444)
+        for (port in fridaPorts) {
+            try {
+                Socket("127.0.0.1", port).use {
+                    return true
+                }
+            } catch (e: Exception) {
+                // port not open
             }
-        } catch (e: Exception) {
-            // port not open
         }
 
         // 2. Scan memory maps for frida agent
@@ -23,7 +26,10 @@ class FridaDetector {
                 val scanner = Scanner(file)
                 while (scanner.hasNextLine()) {
                     val line = scanner.nextLine()
-                    if (line.contains("frida-agent") || line.contains("frida-gadget")) {
+                    if (line.contains("frida-agent") ||
+                        line.contains("frida-gadget") ||
+                        line.contains("frida-server") ||
+                        line.contains("linjector")) {
                         return true
                     }
                 }

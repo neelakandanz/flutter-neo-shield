@@ -91,6 +91,10 @@ shieldLog('User logged in: john@gmail.com with token: Bearer sk-abc123');
 | `sk_live_abc123...` | `[API_KEY HIDDEN]` |
 | `1985-03-15` | `[DOB HIDDEN]` |
 | `192.168.1.1` | `[IP HIDDEN]` |
+| `GB29 NWBK 6016 1331 9268 19` | `[IBAN HIDDEN]` |
+| `AB 12 34 56 C` (UK NIN) | `[NI NUMBER HIDDEN]` |
+| `123-456-789` (Canadian SIN) | `[SIN HIDDEN]` |
+| `A12345678` (Passport) | `[PASSPORT HIDDEN]` |
 
 ---
 
@@ -244,6 +248,8 @@ Attackers often install your app on a rooted device or emulator, attach a debugg
 
 It detects these hostile environments so you can restrict features, clear sensitive data, or crash the app.
 
+> **Fail-closed by default:** If native RASP plugins aren't registered (e.g., running on web/desktop), all checks report threats as detected. Use `RaspChannel.configure(failClosed: false)` during development to change this.
+
 ![RASP Security Report in Action](https://raw.githubusercontent.com/neelakandanz/flutter-neo-shield/master/screenshots/rasp_report.png)
 
 ```dart
@@ -286,7 +292,7 @@ if ((await RaspShield.checkFrida()).isDetected) {
 
 ```yaml
 dependencies:
-  flutter_neo_shield: ^0.5.0
+  flutter_neo_shield: ^0.5.1
 ```
 
 **Step 2:** Run:

@@ -29,6 +29,33 @@ class RootDetector {
             return true
         }
 
+        // Check for Magisk Manager (various package names)
+        try {
+            val magiskPaths = arrayOf(
+                "/sbin/.magisk",
+                "/cache/.disable_magisk",
+                "/dev/.magisk.unblock",
+                "/data/adb/magisk",
+                "/data/adb/magisk.db"
+            )
+            for (path in magiskPaths) {
+                if (File(path).exists()) {
+                    return true
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore permission errors
+        }
+
+        // Check if su is accessible via runtime exec
+        try {
+            val process = Runtime.getRuntime().exec(arrayOf("which", "su"))
+            val exitCode = process.waitFor()
+            if (exitCode == 0) return true
+        } catch (e: Exception) {
+            // Command not found or permission denied
+        }
+
         return false
     }
 }

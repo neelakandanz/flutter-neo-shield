@@ -58,7 +58,13 @@ class DioShieldInterceptor extends Interceptor {
               'x-refresh-token',
               'x-api-secret',
               'x-csrf-token',
-            ];
+            ] {
+    _sensitiveHeadersLower =
+        this.sensitiveHeaders.map((h) => h.toLowerCase()).toSet();
+  }
+
+  /// Cached lowercase set of sensitive headers.
+  late final Set<String> _sensitiveHeadersLower;
 
   /// Optional custom log function. Defaults to [shieldLog].
   final void Function(String message)? logFunction;
@@ -82,37 +88,41 @@ class DioShieldInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final detector = PIIDetector();
-    final sanitizedUrl = detector.sanitize(options.uri.toString());
+    try {
+      final detector = PIIDetector();
+      final sanitizedUrl = detector.sanitize(options.uri.toString());
 
-    _log('┌── DIO Request ──');
-    _log('│ ${options.method} $sanitizedUrl');
+      _log('┌── DIO Request ──');
+      _log('│ ${options.method} $sanitizedUrl');
 
-    // Sanitize headers.
-    final sensitiveHeadersLower =
-        sensitiveHeaders.map((h) => h.toLowerCase()).toSet();
-    for (final entry in options.headers.entries) {
-      if (sensitiveHeadersLower.contains(entry.key.toLowerCase())) {
-        _log('│ ${entry.key}: [REDACTED]');
-      } else {
-        _log('│ ${entry.key}: ${detector.sanitize(entry.value.toString())}');
+      for (final entry in options.headers.entries) {
+        if (_sensitiveHeadersLower.contains(entry.key.toLowerCase())) {
+          _log('│ ${entry.key}: [REDACTED]');
+        } else {
+          _log('│ ${entry.key}: ${detector.sanitize(entry.value.toString())}');
+        }
       }
-    }
 
-    // Sanitize request body.
-    if (sanitizeRequestBody && options.data != null) {
-      if (options.data is Map<String, dynamic>) {
-        final sanitized = JsonSanitizer.sanitize(
-          options.data as Map<String, dynamic>,
-        );
-        _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
-      } else {
-        _log('│ Body: ${detector.sanitize(options.data.toString())}');
+      if (sanitizeRequestBody && options.data != null) {
+        if (options.data is Map<String, dynamic>) {
+          final sanitized = JsonSanitizer.sanitize(
+            options.data as Map<String, dynamic>,
+          );
+          _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
+        } else if (options.data is List<dynamic>) {
+          final sanitized = JsonSanitizer.sanitizeList(
+            options.data as List<dynamic>,
+          );
+          _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
+        } else {
+          _log('│ Body: ${detector.sanitize(options.data.toString())}');
+        }
       }
+
+      _log('└──────────────────');
+    } catch (_) {
+      // Log sanitization failed — continue without logging.
     }
-
-    _log('└──────────────────');
-
     handler.next(options);
   }
 
@@ -121,49 +131,64 @@ class DioShieldInterceptor extends Interceptor {
     Response<dynamic> response,
     ResponseInterceptorHandler handler,
   ) {
-    final detector = PIIDetector();
+    try {
+      final detector = PIIDetector();
 
-    _log('┌── DIO Response ──');
-    _log(
-        '│ ${response.statusCode} ${detector.sanitize(response.requestOptions.uri.toString())}');
+      _log('┌── DIO Response ──');
+      _log(
+          '│ ${response.statusCode} ${detector.sanitize(response.requestOptions.uri.toString())}');
 
-    // Sanitize response body.
-    if (sanitizeResponseBody && response.data != null) {
-      if (response.data is Map<String, dynamic>) {
-        final sanitized = JsonSanitizer.sanitize(
-          response.data as Map<String, dynamic>,
-        );
-        _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
-      } else {
-        _log('│ Body: ${detector.sanitize(response.data.toString())}');
+      if (sanitizeResponseBody && response.data != null) {
+        if (response.data is Map<String, dynamic>) {
+          final sanitized = JsonSanitizer.sanitize(
+            response.data as Map<String, dynamic>,
+          );
+          _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
+        } else if (response.data is List<dynamic>) {
+          final sanitized = JsonSanitizer.sanitizeList(
+            response.data as List<dynamic>,
+          );
+          _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
+        } else {
+          _log('│ Body: ${detector.sanitize(response.data.toString())}');
+        }
       }
+
+      _log('└──────────────────');
+    } catch (_) {
+      // Log sanitization failed — continue without logging.
     }
-
-    _log('└──────────────────');
-
     handler.next(response);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    final detector = PIIDetector();
+    try {
+      final detector = PIIDetector();
 
-    _log('┌── DIO Error ──');
-    _log('│ ${err.type.name}: ${detector.sanitize(err.message ?? '')}');
+      _log('┌── DIO Error ──');
+      _log('│ ${err.type.name}: ${detector.sanitize(err.message ?? '')}');
 
-    if (err.response?.data != null) {
-      if (err.response!.data is Map<String, dynamic>) {
-        final sanitized = JsonSanitizer.sanitize(
-          err.response!.data as Map<String, dynamic>,
-        );
-        _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
-      } else {
-        _log('│ Body: ${detector.sanitize(err.response!.data.toString())}');
+      if (err.response?.data != null) {
+        if (err.response!.data is Map<String, dynamic>) {
+          final sanitized = JsonSanitizer.sanitize(
+            err.response!.data as Map<String, dynamic>,
+          );
+          _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
+        } else if (err.response!.data is List<dynamic>) {
+          final sanitized = JsonSanitizer.sanitizeList(
+            err.response!.data as List<dynamic>,
+          );
+          _log('│ Body: ${const JsonEncoder().convert(sanitized)}');
+        } else {
+          _log('│ Body: ${detector.sanitize(err.response!.data.toString())}');
+        }
       }
+
+      _log('└──────────────────');
+    } catch (_) {
+      // Log sanitization failed — continue without logging.
     }
-
-    _log('└──────────────────');
-
     handler.next(err);
   }
 }

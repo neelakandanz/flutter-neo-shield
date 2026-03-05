@@ -128,7 +128,9 @@ class MemoryShield with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused && _config.autoDisposeOnBackground) {
+    if ((state == AppLifecycleState.paused ||
+            state == AppLifecycleState.detached) &&
+        _config.autoDisposeOnBackground) {
       disposeAll();
     }
   }

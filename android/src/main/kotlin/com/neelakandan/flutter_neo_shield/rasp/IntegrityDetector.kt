@@ -24,8 +24,16 @@ class IntegrityDetector {
             val installer = context.packageManager.getInstallerPackageName(context.packageName)
             // If installer is null, it was sideloaded. We might not want to flag all sideloaded apps as tampered
             // But if it's a known malicious installer or a tool like Lucky Patcher, flag it.
-            if (installer != null && installer == "com.android.vending.billing.InAppBillingService.LUCK") {
-                return true
+            if (installer != null && !allowedInstallers.contains(installer)) {
+                // Check for known malicious installers
+                val suspiciousInstallers = listOf(
+                    "com.chelpus.lackypatcher",
+                    "com.ramdroid.appquarantine",
+                    "com.koushikdutta.rommanager"
+                )
+                if (suspiciousInstallers.contains(installer)) {
+                    return true
+                }
             }
         } catch (e: Exception) {
             // ignore

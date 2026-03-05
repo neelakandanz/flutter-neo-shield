@@ -11,7 +11,13 @@ class HookDetector {
             "de.robv.android.xposed.installer",
             "com.saurik.substrate",
             "org.lsposed.lsposed",
-            "top.johnwu.magisk"
+            "top.johnwu.magisk",
+            "org.lsposed.manager",
+            "io.github.lsposed.manager",
+            "com.topjohnwu.magisk",
+            "me.weishu.exp",
+            "com.formyhm.hideroot",
+            "com.amphoras.hidemyroot"
         )
         val pm = context.packageManager
         for (pkg in hookPackages) {

@@ -84,6 +84,17 @@ class EmulatorDetector {
             return true
         }
 
+        // Check for QEMU-specific system properties
+        try {
+            val process = Runtime.getRuntime().exec(arrayOf("getprop", "ro.hardware.chipname"))
+            val output = process.inputStream.bufferedReader().readText().trim()
+            if (output.contains("ranchu") || output.contains("goldfish")) {
+                return true
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+
         return false
     }
 }

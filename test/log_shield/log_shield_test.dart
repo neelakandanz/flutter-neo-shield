@@ -303,5 +303,172 @@ void main() {
         expect(capturedMessage!, isNot(contains('john@test.com')));
       });
     });
+
+    group('logJson', () {
+      test('sanitizes sensitive keys in JSON', () {
+        String? capturedMessage;
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          sanitizeInDebug: true,
+          outputHandler: (message, level) {
+            capturedMessage = message;
+          },
+        ));
+
+        LogShield().logJson('Response', {'email': 'john@test.com', 'id': 123});
+
+        expect(capturedMessage, isNotNull);
+        expect(capturedMessage!, contains('[REDACTED]'));
+        expect(capturedMessage!, contains('Response'));
+        expect(capturedMessage!, isNot(contains('john@test.com')));
+      });
+
+      test('logJson uses INFO level', () {
+        String? capturedLevel;
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          outputHandler: (message, level) {
+            capturedLevel = level;
+          },
+        ));
+
+        LogShield().logJson('Data', {'key': 'value'});
+        expect(capturedLevel, 'INFO');
+      });
+    });
+
+    group('logError', () {
+      test('sanitizes PII in error message', () {
+        String? capturedMessage;
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          sanitizeInDebug: true,
+          outputHandler: (message, level) {
+            capturedMessage = message;
+          },
+        ));
+
+        LogShield().logError('Failed for john@test.com');
+
+        expect(capturedMessage, isNotNull);
+        expect(capturedMessage!, contains('[EMAIL HIDDEN]'));
+        expect(capturedMessage!, contains('[ERROR]'));
+      });
+
+      test('includes error object', () {
+        String? capturedMessage;
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          sanitizeInDebug: true,
+          outputHandler: (message, level) {
+            capturedMessage = message;
+          },
+        ));
+
+        LogShield().logError(
+          'Failed',
+          error: Exception('Something went wrong'),
+        );
+
+        expect(capturedMessage, isNotNull);
+        expect(capturedMessage!, contains('Error:'));
+        expect(capturedMessage!, contains('Something went wrong'));
+      });
+
+      test('uses ERROR level', () {
+        String? capturedLevel;
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          outputHandler: (message, level) {
+            capturedLevel = level;
+          },
+        ));
+
+        LogShield().logError('Oops');
+        expect(capturedLevel, 'ERROR');
+      });
+    });
+
+    group('showTimestamp', () {
+      test('includes timestamp when enabled', () {
+        String? capturedMessage;
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          showTimestamp: true,
+          outputHandler: (message, level) {
+            capturedMessage = message;
+          },
+        ));
+
+        shieldLog('Hello');
+
+        expect(capturedMessage, isNotNull);
+        // ISO 8601 timestamps contain 'T' as date-time separator.
+        expect(capturedMessage!, contains('T'));
+        expect(capturedMessage!, contains('[INFO]'));
+      });
+
+      test('no timestamp when disabled', () {
+        String? capturedMessage;
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          showTimestamp: false,
+          outputHandler: (message, level) {
+            capturedMessage = message;
+          },
+        ));
+
+        shieldLog('Hello');
+
+        expect(capturedMessage, isNotNull);
+        expect(capturedMessage!, startsWith('[INFO]'));
+      });
+    });
+
+    group('level filtering', () {
+      test('filters out non-enabled levels', () {
+        String? capturedMessage;
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          enabledLevels: {'ERROR'},
+          outputHandler: (message, level) {
+            capturedMessage = message;
+          },
+        ));
+
+        shieldLog('Hello', level: 'INFO');
+        expect(capturedMessage, isNull);
+
+        shieldLog('Error!', level: 'ERROR');
+        expect(capturedMessage, isNotNull);
+        expect(capturedMessage!, contains('[ERROR]'));
+      });
+
+      test('empty enabledLevels allows all levels', () {
+        final levels = <String>[];
+
+        LogShield().init(LogShieldConfig(
+          silentInRelease: false,
+          enabledLevels: {},
+          outputHandler: (message, level) {
+            levels.add(level);
+          },
+        ));
+
+        shieldLog('a', level: 'INFO');
+        shieldLog('b', level: 'WARNING');
+        shieldLog('c', level: 'ERROR');
+
+        expect(levels, ['INFO', 'WARNING', 'ERROR']);
+      });
+    });
   });
 }

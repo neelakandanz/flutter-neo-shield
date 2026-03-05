@@ -20,6 +20,8 @@ class JsonSanitizer {
   /// Private constructor — all methods are static.
   JsonSanitizer._();
 
+  static const int _maxDepth = 50;
+
   /// Sanitizes a JSON map by replacing sensitive key values with
   /// `[REDACTED]` and running PII detection on other string values.
   ///
@@ -36,7 +38,7 @@ class JsonSanitizer {
   }) {
     final keys = sensitiveKeys ?? PIIDetector.defaultSensitiveKeys;
     final keysLower = keys.map((k) => k.toLowerCase()).toSet();
-    return _sanitizeMap(json, keysLower);
+    return _sanitizeMap(json, keysLower, 0);
   }
 
   /// Sanitizes each item in a list, processing maps and strings.
@@ -53,13 +55,15 @@ class JsonSanitizer {
   }) {
     final keys = sensitiveKeys ?? PIIDetector.defaultSensitiveKeys;
     final keysLower = keys.map((k) => k.toLowerCase()).toSet();
-    return _sanitizeListInternal(list, keysLower);
+    return _sanitizeListInternal(list, keysLower, 0);
   }
 
   static Map<String, dynamic> _sanitizeMap(
     Map<String, dynamic> json,
     Set<String> sensitiveKeysLower,
+    int depth,
   ) {
+    if (depth >= _maxDepth) return json;
     final result = <String, dynamic>{};
 
     for (final entry in json.entries) {
@@ -69,11 +73,13 @@ class JsonSanitizer {
         result[entry.key] = _sanitizeMap(
           entry.value as Map<String, dynamic>,
           sensitiveKeysLower,
+          depth + 1,
         );
       } else if (entry.value is List) {
         result[entry.key] = _sanitizeListInternal(
           entry.value as List<dynamic>,
           sensitiveKeysLower,
+          depth + 1,
         );
       } else if (entry.value is String) {
         result[entry.key] = PIIDetector().sanitize(entry.value as String);
@@ -88,12 +94,14 @@ class JsonSanitizer {
   static List<dynamic> _sanitizeListInternal(
     List<dynamic> list,
     Set<String> sensitiveKeysLower,
+    int depth,
   ) {
+    if (depth >= _maxDepth) return list;
     return list.map((item) {
       if (item is Map<String, dynamic>) {
-        return _sanitizeMap(item, sensitiveKeysLower);
+        return _sanitizeMap(item, sensitiveKeysLower, depth + 1);
       } else if (item is List) {
-        return _sanitizeListInternal(item, sensitiveKeysLower);
+        return _sanitizeListInternal(item, sensitiveKeysLower, depth + 1);
       } else if (item is String) {
         return PIIDetector().sanitize(item);
       }

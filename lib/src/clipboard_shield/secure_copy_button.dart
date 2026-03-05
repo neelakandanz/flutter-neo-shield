@@ -91,8 +91,8 @@ class _SecureCopyButtonState extends State<SecureCopyButton> {
 
     widget.onCopied?.call();
 
-    // Listen for clear event.
-    unawaited(_clearSubscription?.cancel());
+    // Listen for clear event — cancel previous subscription first.
+    await _clearSubscription?.cancel();
     _clearSubscription = ClipboardShield().onCleared.listen((_) {
       if (!mounted) return;
       widget.onCleared?.call();

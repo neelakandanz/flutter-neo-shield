@@ -1,3 +1,27 @@
+## 0.5.1
+
+### iOS Native Hardening
+* **JailbreakDetector:** Added 20+ modern jailbreak paths (Sileo, Zebra, Substitute, checkra1n, Dopamine). Added URL scheme checks (sileo://, zbra://, filza://). Added symbolic link detection and sandbox write test.
+* **FridaDetector:** Now checks ports 27042, 27043, and 4444. Fixed dangling pointer in socket code (undefined behavior). Added file-based Frida detection. Added connection timeout.
+* **HookDetector:** Expanded from 4 to 20 suspicious library names (FridaGadget, SubstrateInserter, Liberty, Choicy, Shadow, etc.).
+
+### Android Native Hardening
+* **RootDetector:** Added 5 Magisk-specific paths and `Runtime.exec("which su")` check.
+* **FridaDetector:** Added ports 27043, 4444. Added "frida-server" and "linjector" to memory maps scan.
+* **HookDetector:** Expanded hook packages from 4 to 10 entries.
+* **IntegrityDetector:** Fixed Lucky Patcher detection with proper `allowedInstallers` check.
+* **EmulatorDetector:** Added QEMU chipname system property check.
+
+### Test Coverage
+* **306 tests** (up from 239 — 28% increase).
+* New test suites: `rasp_shield_test`, `rasp_channel_test`, `dio_shield_interceptor_test`, `secure_paste_field_test`, `flutter_neo_shield_test`, `shield_report_test`, `pii_type_test`.
+* Enhanced: `pii_detector_test` (SSN validation edge cases, API key false positives, name detection, international PII), `log_shield_test` (logJson, logError, timestamps, level filtering).
+
+### Bug Fixes
+* Fixed API key regex test that no longer matched after tightening regex to require digits.
+
+---
+
 ## 0.5.0
 
 ### Security Hardening (47 issues fixed across all modules)

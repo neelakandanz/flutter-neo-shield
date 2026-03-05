@@ -32,6 +32,15 @@ class PIIDetector {
   ShieldReport? _report;
   final List<PIIPattern> _patterns = [];
   final Set<String> _sensitiveNames = {};
+  final Map<String, RegExp> _nameRegexCache = {};
+
+  // Cached regex constants for validators.
+  static final RegExp _nonDigitRegex = RegExp(r'[^\d]');
+  static final RegExp _phoneSeparatorRegex = RegExp(r'[+\-()\s.]');
+  static final RegExp _cardSeparatorRegex = RegExp(r'[\s-]');
+  static final RegExp _allDigitsRegex = RegExp(r'^\d+$');
+
+  static const int _maxSanitizeDepth = 50;
 
   /// The default sensitive keys used for JSON sanitization.
   ///
@@ -126,7 +135,9 @@ class PIIDetector {
       _report ??= ShieldReport();
     }
 
-    // Register initial sensitive names.
+    // Clear and re-register sensitive names to prevent accumulation.
+    _sensitiveNames.clear();
+    _nameRegexCache.clear();
     for (final name in config.sensitiveNames) {
       _sensitiveNames.add(name);
     }
@@ -191,6 +202,7 @@ class PIIDetector {
   /// ```
   void clearNames() {
     _sensitiveNames.clear();
+    _nameRegexCache.clear();
   }
 
   /// Returns the set of currently registered sensitive names.
@@ -329,9 +341,9 @@ class PIIDetector {
       for (final name in _sensitiveNames) {
         if (name.length < 3) continue;
 
-        final nameRegex = RegExp(
-          '\\b${RegExp.escape(name)}\\b',
-          caseSensitive: false,
+        final nameRegex = _nameRegexCache.putIfAbsent(
+          name.toLowerCase(),
+          () => RegExp('\\b${RegExp.escape(name)}\\b', caseSensitive: false),
         );
         final nameMatches = nameRegex.allMatches(input);
         for (final match in nameMatches) {
@@ -422,13 +434,15 @@ class PIIDetector {
     final keys = sensitiveKeys ?? defaultSensitiveKeys;
     final keysLower = keys.map((k) => k.toLowerCase()).toSet();
 
-    return _sanitizeMap(json, keysLower);
+    return _sanitizeMap(json, keysLower, 0);
   }
 
   Map<String, dynamic> _sanitizeMap(
     Map<String, dynamic> json,
     Set<String> sensitiveKeysLower,
+    int depth,
   ) {
+    if (depth >= _maxSanitizeDepth) return json;
     final result = <String, dynamic>{};
 
     for (final entry in json.entries) {
@@ -438,11 +452,13 @@ class PIIDetector {
         result[entry.key] = _sanitizeMap(
           entry.value as Map<String, dynamic>,
           sensitiveKeysLower,
+          depth + 1,
         );
       } else if (entry.value is List) {
         result[entry.key] = _sanitizeList(
           entry.value as List<dynamic>,
           sensitiveKeysLower,
+          depth + 1,
         );
       } else if (entry.value is String) {
         result[entry.key] = sanitize(entry.value as String);
@@ -457,12 +473,14 @@ class PIIDetector {
   List<dynamic> _sanitizeList(
     List<dynamic> list,
     Set<String> sensitiveKeysLower,
+    int depth,
   ) {
+    if (depth >= _maxSanitizeDepth) return list;
     return list.map((item) {
       if (item is Map<String, dynamic>) {
-        return _sanitizeMap(item, sensitiveKeysLower);
+        return _sanitizeMap(item, sensitiveKeysLower, depth + 1);
       } else if (item is List) {
-        return _sanitizeList(item, sensitiveKeysLower);
+        return _sanitizeList(item, sensitiveKeysLower, depth + 1);
       } else if (item is String) {
         return sanitize(item);
       }
@@ -483,6 +501,7 @@ class PIIDetector {
     _report?.reset();
     _report = null;
     _sensitiveNames.clear();
+    _nameRegexCache.clear();
     _patterns.clear();
     _initBuiltInPatterns();
   }
@@ -499,6 +518,7 @@ class PIIDetector {
         regex: RegExp(r'\b\d{3}-\d{2}-\d{4}\b'),
         replacement: '[SSN HIDDEN]',
         description: 'US Social Security Numbers with dashes',
+        validator: _ssnDashedValidate,
       ),
       PIIPattern(
         type: PIIType.ssn,
@@ -545,12 +565,13 @@ class PIIDetector {
         description: 'Password and secret key-value pairs',
       ),
 
-      // 6. API Key — common prefixed formats (dash or underscore separator).
+      // 6. API Key — common prefixed formats requiring at least one digit.
       PIIPattern(
         type: PIIType.apiKey,
-        regex: RegExp(r'\b(?:sk|pk|api|key|token)[_-][A-Za-z0-9_-]{8,}\b'),
+        regex: RegExp(r'\b(?:sk|pk|api|key|token)[_-][A-Za-z0-9_-]*\d[A-Za-z0-9_-]*\b'),
         replacement: '[API_KEY HIDDEN]',
         description: 'Common API key formats',
+        validator: _apiKeyValidate,
       ),
 
       // 7. Email addresses — disallows consecutive dots per RFC 5322.
@@ -661,6 +682,18 @@ class PIIDetector {
     ]);
   }
 
+  /// Validates a dashed SSN by checking area/group/serial rules.
+  static bool _ssnDashedValidate(String match) {
+    final parts = match.split('-');
+    if (parts.length != 3) return false;
+    final area = int.tryParse(parts[0]) ?? 0;
+    final group = int.tryParse(parts[1]) ?? 0;
+    final serial = int.tryParse(parts[2]) ?? 0;
+    if (area == 0 || area == 666 || area >= 900) return false;
+    if (group == 0 || serial == 0) return false;
+    return true;
+  }
+
   /// Validates a 9-digit SSN (no dashes) by checking area/group rules.
   ///
   /// Rejects known invalid SSN patterns: area 000/666/900-999.
@@ -680,18 +713,23 @@ class PIIDetector {
   /// Requires 7-15 digits (ITU-T E.164 range) and at least one
   /// separator or country code prefix to avoid matching plain numbers.
   static bool _phoneValidate(String match) {
-    final digits = match.replaceAll(RegExp(r'[^\d]'), '');
+    final digits = match.replaceAll(_nonDigitRegex, '');
     if (digits.length < 7 || digits.length > 15) return false;
-    // Require a separator, parenthesis, or + prefix to distinguish
-    // from plain numeric strings like order IDs.
-    return match.contains(RegExp(r'[+\-()\s.]'));
+    return match.contains(_phoneSeparatorRegex);
+  }
+
+  /// Validates an API key by ensuring minimum 8 chars after prefix separator.
+  static bool _apiKeyValidate(String match) {
+    final sepIndex = match.indexOf(RegExp(r'[_-]'));
+    if (sepIndex < 0) return false;
+    return match.length - sepIndex - 1 >= 8;
   }
 
   /// Validates a credit card number using the Luhn algorithm.
   static bool _luhnValidate(String match) {
-    final digits = match.replaceAll(RegExp(r'[\s-]'), '');
+    final digits = match.replaceAll(_cardSeparatorRegex, '');
     if (digits.length < 13 || digits.length > 19) return false;
-    if (!RegExp(r'^\d+$').hasMatch(digits)) return false;
+    if (!_allDigitsRegex.hasMatch(digits)) return false;
 
     var sum = 0;
     var alternate = false;

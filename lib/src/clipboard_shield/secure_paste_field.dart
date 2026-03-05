@@ -1,6 +1,8 @@
 /// TextField wrapper that auto-clears clipboard after paste.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'clipboard_shield.dart';
@@ -103,11 +105,11 @@ class _SecurePasteFieldState extends State<SecurePasteField> {
   }
 
   void _onChanged(String newText) {
-    // Detect paste by checking if multiple characters were added at once
-    // and the new text doesn't start with the old text (insertion, not append).
-    // Threshold of 3 chars reduces false positives from autocorrect/IME.
+    // Detect paste by checking if multiple characters were added at once.
+    // Threshold of 5 chars reduces false positives from autocorrect/IME
+    // while still catching most paste operations.
     final lengthDiff = newText.length - _previousText.length;
-    if (lengthDiff >= 3) {
+    if (lengthDiff >= 5) {
       // Determine the inserted segment.
       // If the old text is a prefix, the paste is at the end.
       // Otherwise, find the divergence point.
@@ -119,8 +121,7 @@ class _SecurePasteFieldState extends State<SecurePasteField> {
       }
 
       if (widget.clearAfterPaste) {
-        // Await the clear to reduce the race window.
-        ClipboardShield().clearNow();
+        unawaited(ClipboardShield().clearNow());
       }
 
       widget.onPasted?.call(pastedText);

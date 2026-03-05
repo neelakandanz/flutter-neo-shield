@@ -119,7 +119,7 @@ void main() {
     group('API key detection', () {
       test('sanitizes common API key formats', () {
         final result = PIIDetector().sanitize(
-          'sk-abcdefghijklmnopqrstuvwxyz',
+          'sk-abc123defghijklmnopqrstuvwxyz',
         );
         expect(result, '[API_KEY HIDDEN]');
       });
@@ -322,6 +322,120 @@ void main() {
         PIIDetector().clearNames();
         final result = PIIDetector().sanitize('Hello John');
         expect(result, 'Hello John');
+      });
+    });
+
+    group('SSN dashed validation edge cases', () {
+      test('rejects area 000', () {
+        final result = PIIDetector().sanitize('SSN: 000-12-3456');
+        expect(result, 'SSN: 000-12-3456'); // not detected
+      });
+
+      test('rejects area 666', () {
+        final result = PIIDetector().sanitize('SSN: 666-12-3456');
+        expect(result, 'SSN: 666-12-3456'); // not detected
+      });
+
+      test('rejects area 900+', () {
+        final result = PIIDetector().sanitize('SSN: 900-12-3456');
+        expect(result, 'SSN: 900-12-3456'); // not detected
+      });
+
+      test('rejects group 00', () {
+        final result = PIIDetector().sanitize('SSN: 123-00-4567');
+        expect(result, 'SSN: 123-00-4567'); // not detected
+      });
+
+      test('rejects serial 0000', () {
+        final result = PIIDetector().sanitize('SSN: 123-45-0000');
+        expect(result, 'SSN: 123-45-0000'); // not detected
+      });
+
+      test('accepts valid SSN', () {
+        final result = PIIDetector().sanitize('SSN: 123-45-6789');
+        expect(result, 'SSN: [SSN HIDDEN]');
+      });
+    });
+
+    group('API key validation edge cases', () {
+      test('rejects short API key (less than 8 chars after prefix)', () {
+        final result = PIIDetector().sanitize('key: sk-ab1cd');
+        expect(result, isNot(contains('[API_KEY HIDDEN]')));
+      });
+
+      test('rejects API key without digits', () {
+        final result = PIIDetector().sanitize('sk-abcdefghijklmnop');
+        expect(result, isNot(contains('[API_KEY HIDDEN]')));
+      });
+
+      test('accepts valid API key with digits and 8+ chars', () {
+        final result = PIIDetector().sanitize('sk-abc123defghijk');
+        expect(result, '[API_KEY HIDDEN]');
+      });
+    });
+
+    group('Name detection', () {
+      test('detects registered name with word boundaries', () {
+        PIIDetector().registerName('Alice');
+        final result = PIIDetector().sanitize('Hello Alice!');
+        expect(result, 'Hello [NAME HIDDEN]!');
+      });
+
+      test('does not match partial word', () {
+        PIIDetector().registerName('Alice');
+        final result = PIIDetector().sanitize('Malice is bad');
+        // "Alice" in "Malice" should not match (word boundary).
+        expect(result, 'Malice is bad');
+      });
+
+      test('rejects names shorter than 3 chars', () {
+        PIIDetector().registerName('Al');
+        expect(PIIDetector().sensitiveNames, isEmpty);
+      });
+    });
+
+    group('International PII patterns', () {
+      test('detects IBAN', () {
+        final result = PIIDetector().sanitize('IBAN: GB29 NWBK 6016 1331 9268 19');
+        expect(result, contains('[IBAN HIDDEN]'));
+      });
+
+      test('detects UK NI number', () {
+        final result = PIIDetector().sanitize('NI: AB 12 34 56 C');
+        expect(result, contains('[NI NUMBER HIDDEN]'));
+      });
+
+      test('detects Canadian SIN', () {
+        final result = PIIDetector().sanitize('SIN: 123-456-789');
+        expect(result, contains('[SIN HIDDEN]'));
+      });
+    });
+
+    group('containsPII and getPIIType', () {
+      test('containsPII returns true for email', () {
+        expect(PIIDetector().containsPII('john@test.com'), isTrue);
+      });
+
+      test('containsPII returns false for plain text', () {
+        expect(PIIDetector().containsPII('hello world'), isFalse);
+      });
+
+      test('getPIIType returns email type', () {
+        expect(PIIDetector().getPIIType('john@test.com'), PIIType.email);
+      });
+
+      test('getPIIType returns null for plain text', () {
+        expect(PIIDetector().getPIIType('hello world'), isNull);
+      });
+    });
+
+    group('empty input', () {
+      test('sanitize returns empty string for empty input', () {
+        expect(PIIDetector().sanitize(''), '');
+      });
+
+      test('detect returns empty list for empty input', () {
+        expect(PIIDetector().detect(''), isEmpty);
       });
     });
   });
