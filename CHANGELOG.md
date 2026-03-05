@@ -1,3 +1,7 @@
+## 0.5.2
+
+* Fixed an issue with `.pubignore` that incorrectly excluded `dio_shield_interceptor.dart`. This caused static analysis failures on pub.dev, which in turn prevented pub.dev from detecting support for all 6 platforms (iOS, Android, Web, Windows, macOS, Linux). The package now correctly reports full platform support.
+
 ## 0.5.1
 
 ### iOS Native Hardening

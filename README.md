@@ -295,7 +295,7 @@ if ((await RaspShield.checkFrida()).isDetected) {
 
 ```yaml
 dependencies:
-  flutter_neo_shield: ^0.5.1
+  flutter_neo_shield: ^0.5.2
 ```
 
 **Step 2:** Run:
@@ -388,7 +388,7 @@ A: **No.** You need to replace `print()` with `shieldLog()` in your code. It's a
 
 **Q: But if `shieldLog()` hides data, how do I debug during development?**
 
-A: By default (v0.5.0+), `shieldLog()` hides PII in all modes for safety. To see real values during local development, set `sanitizeInDebug: false` in your `LogShieldConfig`. You write the code once, and it does the right thing in each mode.
+A: By default (v0.5.2+), `shieldLog()` hides PII in all modes for safety. To see real values during local development, set `sanitizeInDebug: false` in your `LogShieldConfig`. You write the code once, and it does the right thing in each mode.
 
 **Q: Do I need to use all 5 modules?**
 
