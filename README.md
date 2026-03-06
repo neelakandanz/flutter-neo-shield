@@ -21,7 +21,7 @@ PII = **Personally Identifiable Information**. Things like:
 
 If any of this data leaks (through logs, clipboard, or memory), it's a security risk.
 
-**flutter_neo_shield has 5 modules to prevent this:**
+**flutter_neo_shield has 6 modules to prevent this:**
 
 | Module | What it does (in one line) |
 |--------|---------------------------|
@@ -30,6 +30,7 @@ If any of this data leaks (through logs, clipboard, or memory), it's a security 
 | **Memory Shield** | Stores secrets as bytes and overwrites them with zeros when you're done |
 | **String Shield** | Encrypts string literals at compile time so they can't be extracted from your binary with `strings` |
 | **RASP Shield** | Detects Root, Jailbreak, Debugger, Emulator, Frida, and Tampering at runtime to block attackers |
+| **Screen Shield** | Blocks screenshots, screen recording, and app-switcher thumbnails from capturing sensitive screens |
 
 ---
 
@@ -289,13 +290,109 @@ if ((await RaspShield.checkFrida()).isDetected) {
 
 ---
 
+### 6. Screen Shield — "Block screenshots & screen recording"
+
+**The problem:**
+
+Your app shows sensitive data — bank balances, OTPs, medical records, credit card numbers. A malicious app (or even the user) can screenshot or screen-record this data. On Android, any app with `MEDIA_PROJECTION` permission can silently record your screen. On iOS, the built-in screen recorder or AirPlay mirroring can capture everything.
+
+Even the **app switcher** (recent apps view) takes a snapshot of your screen — so when the user presses the home button, your sensitive data is visible as a thumbnail to anyone looking at the phone.
+
+**How Screen Shield fixes it:**
+
+It uses OS-level APIs to make your app's content **invisible to all capture methods**:
+
+- **Android:** Sets `FLAG_SECURE` on the Activity window. The OS itself renders a **black screen** for any capture — screenshots, screen recording, Chromecast, `adb screencap`, and the app switcher thumbnail. This works on all Android versions.
+- **iOS:** Uses a `UITextField` with `isSecureTextEntry = true` as a rendering layer. The OS treats content in this layer as DRM-protected and **blanks it during capture**. This is the same technique used by banking apps. Additionally, a blur overlay is shown in the app switcher.
+
+**Simplest usage — protect the entire app:**
+
+```dart
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterNeoShield.init(
+    screenConfig: ScreenShieldConfig(
+      blockScreenshots: true,    // Block screenshots
+      blockRecording: true,      // Block screen recording
+      guardAppSwitcher: true,    // Blur content in app switcher
+    ),
+  );
+  runApp(MyApp());
+}
+// That's it. Every screen in your app is now protected.
+```
+
+**Per-screen protection — only protect sensitive screens:**
+
+```dart
+// Wrap only the screens that show sensitive data:
+class PaymentScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ScreenShieldScope(
+      enableProtection: true,       // Block capture on this screen
+      guardAppSwitcher: true,       // Blur in app switcher
+      onScreenshot: () {            // Called when screenshot is taken (iOS only)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Screenshots are not allowed on this screen')),
+        );
+      },
+      child: Scaffold(
+        body: PaymentForm(),        // This content will be black in screenshots
+      ),
+    );
+  }
+}
+// When the user navigates away from PaymentScreen, protection is auto-disabled.
+```
+
+**Toggle protection dynamically — e.g., protect only during OTP display:**
+
+```dart
+// Show OTP — enable protection
+await FlutterNeoShield.screen.enableProtection();
+
+// ... user enters OTP ...
+
+// OTP consumed — disable protection
+await FlutterNeoShield.screen.disableProtection();
+```
+
+**Detect screen recording (iOS) — e.g., pause sensitive content:**
+
+```dart
+FlutterNeoShield.screen.onRecordingStateChanged.listen((event) {
+  if (event.isRecording) {
+    // Someone started screen recording!
+    // Navigate away, pause video, or show a warning
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => RecordingBlockedScreen()),
+    );
+  }
+});
+```
+
+**What each platform does when you enable protection:**
+
+| Action | Android | iOS |
+|--------|---------|-----|
+| User takes screenshot | Captures **black screen** | Captures **blank content** |
+| User starts screen recording | Records **black screen** | Content is **blanked**; recording state event fires |
+| User Chromecasts / AirPlays | **Black screen** on TV | **Blank content** on TV |
+| App appears in recent apps | Thumbnail is **black** | Thumbnail is **blurred** |
+| `adb screencap` (developer tool) | Captures **black screen** | N/A |
+
+> **Note:** No software can prevent someone from pointing a camera at their phone screen. Screen Shield blocks all **digital** capture methods.
+
+---
+
 ## Installation
 
 **Step 1:** Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_neo_shield: ^0.5.2
+  flutter_neo_shield: ^0.6.0
 ```
 
 **Step 2:** Run:
@@ -337,6 +434,12 @@ final report = await RaspShield.fullSecurityScan();
 if (!report.isSafe) {
   // exit or restrict user
 }
+
+// Block screenshots & recording:
+await FlutterNeoShield.screen.enableProtection();
+
+// Or wrap a single screen:
+ScreenShieldScope(child: SensitiveScreen())
 ```
 
 ---
@@ -390,7 +493,7 @@ A: **No.** You need to replace `print()` with `shieldLog()` in your code. It's a
 
 A: By default (v0.5.2+), `shieldLog()` hides PII in all modes for safety. To see real values during local development, set `sanitizeInDebug: false` in your `LogShieldConfig`. You write the code once, and it does the right thing in each mode.
 
-**Q: Do I need to use all 5 modules?**
+**Q: Do I need to use all 6 modules?**
 
 A: No. Use only what you need. You can import just one module:
 
@@ -400,7 +503,29 @@ import 'package:flutter_neo_shield/clipboard_shield.dart';  // Only Clipboard Sh
 import 'package:flutter_neo_shield/memory_shield.dart';     // Only Memory Shield
 import 'package:flutter_neo_shield/string_shield.dart';     // Only String Shield
 import 'package:flutter_neo_shield/rasp_shield.dart';       // Only RASP Shield
+import 'package:flutter_neo_shield/flutter_neo_shield.dart'; // Screen Shield (included in main import)
 ```
+
+**Q: Does Screen Shield actually prevent screenshots?**
+
+A: **Yes, on Android and iOS.** On Android, `FLAG_SECURE` makes the OS render a black screen for all capture methods — this is enforced at the OS level and cannot be bypassed without root. On iOS, the secure text field trick blanks the content during capture. However, no software can prevent someone from pointing a physical camera at the screen.
+
+**Q: Can I protect only some screens and not others?**
+
+A: Yes. Use `ScreenShieldScope` widget to wrap only the screens that show sensitive data. When the user navigates away, protection is automatically disabled:
+
+```dart
+ScreenShieldScope(
+  child: PaymentScreen(),   // Protected
+)
+// Other screens remain unprotected
+```
+
+Or toggle manually: `await FlutterNeoShield.screen.enableProtection()` / `.disableProtection()`.
+
+**Q: Does Screen Shield work on web or desktop?**
+
+A: Not yet. Screen capture prevention requires OS-level APIs that web browsers and Linux don't expose. macOS (`NSWindow.sharingType = .none`) and Windows (`SetWindowDisplayAffinity`) support is planned for a future release. On unsupported platforms, the calls are no-ops — no errors, no crashes.
 
 **Q: Does this send my data to any server?**
 
@@ -461,6 +586,14 @@ FlutterNeoShield.init(
     enableCache: false,  // Set true to cache decrypted strings (faster but less secure)
     enableStats: false,  // Track deobfuscation counts (off by default)
   ),
+  screenConfig: ScreenShieldConfig(
+    blockScreenshots: true,         // Prevent screenshots from capturing app content
+    blockRecording: true,           // Prevent screen recording
+    guardAppSwitcher: true,         // Blur/hide content in recent apps
+    detectScreenshots: true,        // Listen for screenshot events (iOS)
+    detectRecording: true,          // Listen for recording state changes (iOS)
+    enableOnInit: true,             // Auto-enable on init (default: true)
+  ),
 );
 ```
 
@@ -494,14 +627,14 @@ See the [Dio integration file](https://github.com/neelakandanz/flutter-neo-shiel
 
 ## Platform Support
 
-| Platform | Log Shield | Clipboard Shield | Memory Shield | String Shield | RASP Shield |
-|----------|:----------:|:----------------:|:-------------:|:-------------:|:-----------:|
-| Android | Yes | Yes | Yes (native wipe) | Yes | Yes |
-| iOS | Yes | Yes | Yes (native wipe) | Yes | Yes |
-| Web | Yes | Yes | Yes (Dart fallback) | Yes | No |
-| macOS | Yes | Yes | Yes (Dart fallback) | Yes | No |
-| Windows | Yes | Yes | Yes (Dart fallback) | Yes | No |
-| Linux | Yes | Yes | Yes (Dart fallback) | Yes | No |
+| Platform | Log Shield | Clipboard Shield | Memory Shield | String Shield | RASP Shield | Screen Shield |
+|----------|:----------:|:----------------:|:-------------:|:-------------:|:-----------:|:-------------:|
+| Android | Yes | Yes | Yes (native wipe) | Yes | Yes | Yes (FLAG_SECURE) |
+| iOS | Yes | Yes | Yes (native wipe) | Yes | Yes | Yes (secure layer + detection) |
+| Web | Yes | Yes | Yes (Dart fallback) | Yes | No | No |
+| macOS | Yes | Yes | Yes (Dart fallback) | Yes | No | Planned |
+| Windows | Yes | Yes | Yes (Dart fallback) | Yes | No | Planned |
+| Linux | Yes | Yes | Yes (Dart fallback) | Yes | No | No |
 
 ---
 

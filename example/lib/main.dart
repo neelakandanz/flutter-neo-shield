@@ -6,20 +6,61 @@ import 'screens/log_shield_demo.dart';
 import 'screens/memory_shield_demo.dart';
 import 'screens/string_shield_demo.dart';
 import 'screens/rasp_shield_demo.dart';
+import 'screens/screen_shield_demo.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize all shield modules with sensible defaults.
+  // Each module is optional — only pass configs for what you need.
   FlutterNeoShield.init(
+    // Core PII detection engine — tracks detection statistics.
     config: const ShieldConfig(enableReporting: true),
+
+    // Log Shield — hides PII from debug console and crash reporters.
+    // silentInRelease: no logs at all in production builds.
     logConfig: const LogShieldConfig(silentInRelease: true),
+
+    // Clipboard Shield — auto-clears clipboard after 30 seconds.
+    // Prevents sensitive data (API keys, passwords) from lingering.
     clipboardConfig: const ClipboardShieldConfig(
       defaultExpiry: Duration(seconds: 30),
     ),
+
+    // Memory Shield — overwrites secret bytes with zeros on dispose.
+    // enablePlatformWipe: false = use Dart-side wipe only (no native channel).
     memoryConfig: const MemoryShieldConfig(enablePlatformWipe: false),
+
+    // String Shield — decrypts obfuscated strings at runtime.
+    // enableCache: true = cache decrypted values (faster, slightly less secure).
+    // enableStats: true = track how many times each string is accessed.
     stringShieldConfig: const StringShieldConfig(
       enableCache: true,
       enableStats: true,
+    ),
+
+    // Screen Shield — prevents screenshots and screen recording.
+    //
+    // How it works:
+    //   Android: Sets FLAG_SECURE on the Activity window. The OS renders a
+    //            BLACK screen for all capture methods (screenshots, recording,
+    //            Chromecast, adb screencap, and the app switcher thumbnail).
+    //
+    //   iOS:     Uses a secure UITextField layer trick. The OS blanks the
+    //            content during capture. Also adds a blur overlay in the
+    //            app switcher (recent apps). Fires events when screenshots
+    //            are taken or screen recording starts/stops.
+    //
+    // enableOnInit: true = protection starts immediately when the app launches.
+    // Set to false if you only want to protect specific screens (use
+    // ScreenShieldScope widget or call enableProtection() manually).
+    screenConfig: const ScreenShieldConfig(
+      enableOnInit: false, // We'll toggle it in the demo screen manually
+      blockScreenshots: true,
+      blockRecording: true,
+      guardAppSwitcher: true,
+      detectScreenshots: true,
+      detectRecording: true,
     ),
   );
 
@@ -27,6 +68,14 @@ void main() {
 }
 
 /// The flutter_neo_shield demo application.
+///
+/// Showcases all 6 shield modules with interactive demos:
+/// - Log Shield: sanitized logging with PII detection
+/// - Clipboard Shield: auto-clearing clipboard with countdown
+/// - Memory Shield: SecureString/SecureBytes lifecycle management
+/// - String Shield: compile-time obfuscation with runtime stats
+/// - RASP Shield: full security scan (root, debugger, emulator, etc.)
+/// - Screen Shield: screenshot/recording prevention with live toggle
 class FlutterNeoShieldDemoApp extends StatelessWidget {
   /// Creates the demo app.
   const FlutterNeoShieldDemoApp({super.key});
@@ -51,7 +100,7 @@ class FlutterNeoShieldDemoApp extends StatelessWidget {
   }
 }
 
-/// Home page with bottom navigation for the four demo screens.
+/// Home page with bottom navigation for the six demo screens.
 class HomePage extends StatefulWidget {
   /// Creates the [HomePage].
   const HomePage({super.key});
@@ -69,6 +118,7 @@ class _HomePageState extends State<HomePage> {
     MemoryShieldDemo(),
     StringShieldDemo(),
     RaspShieldDemo(),
+    ScreenShieldDemo(),
   ];
 
   final _titles = const [
@@ -77,6 +127,7 @@ class _HomePageState extends State<HomePage> {
     'Memory Shield',
     'String Shield',
     'RASP Shield',
+    'Screen Shield',
   ];
 
   @override
@@ -96,7 +147,7 @@ class _HomePageState extends State<HomePage> {
           NavigationDestination(
             icon: Icon(Icons.description_outlined),
             selectedIcon: Icon(Icons.description),
-            label: 'Log Shield',
+            label: 'Log',
           ),
           NavigationDestination(
             icon: Icon(Icons.content_paste_outlined),
@@ -117,6 +168,11 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.gpp_good_outlined),
             selectedIcon: Icon(Icons.gpp_good),
             label: 'RASP',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.screenshot_monitor_outlined),
+            selectedIcon: Icon(Icons.screenshot_monitor),
+            label: 'Screen',
           ),
         ],
       ),

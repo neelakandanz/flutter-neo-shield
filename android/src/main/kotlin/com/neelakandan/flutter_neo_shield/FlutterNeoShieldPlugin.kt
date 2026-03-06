@@ -1,7 +1,11 @@
 package com.neelakandan.flutter_neo_shield
 
+import android.app.Activity
 import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -10,24 +14,43 @@ import io.flutter.plugin.common.MethodChannel.Result
 /**
  * FlutterNeoShieldPlugin — Android platform implementation.
  *
- * Provides native memory allocation and secure wipe operations
- * for the Memory Shield module.
+ * Provides native memory allocation, secure wipe operations,
+ * RASP checks, and screen protection.
  */
-class FlutterNeoShieldPlugin : FlutterPlugin, MethodCallHandler {
+class FlutterNeoShieldPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
     private lateinit var raspChannel: MethodChannel
+    private lateinit var screenChannel: MethodChannel
+    private var screenEventChannel: EventChannel? = null
     private val secureStorage = HashMap<String, ByteArray>()
     private val debuggerDetector = com.neelakandan.flutter_neo_shield.rasp.DebuggerDetector()
     private var applicationContext: android.content.Context? = null
+    private var activity: Activity? = null
+    private val screenProtector = com.neelakandan.flutter_neo_shield.screen.ScreenProtector()
+    private val recordingDetector = com.neelakandan.flutter_neo_shield.screen.ScreenRecordingDetector()
+    private var appSwitcherGuardEnabled = false
 
     override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         applicationContext = binding.applicationContext
-        
+
         channel = MethodChannel(binding.binaryMessenger, "com.neelakandan.flutter_neo_shield/memory")
         channel.setMethodCallHandler(this)
 
         raspChannel = MethodChannel(binding.binaryMessenger, "com.neelakandan.flutter_neo_shield/rasp")
         raspChannel.setMethodCallHandler(this)
+
+        screenChannel = MethodChannel(binding.binaryMessenger, "com.neelakandan.flutter_neo_shield/screen")
+        screenChannel.setMethodCallHandler(this)
+
+        screenEventChannel = EventChannel(binding.binaryMessenger, "com.neelakandan.flutter_neo_shield/screen_events")
+        screenEventChannel?.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                // Android does not have native screenshot/recording callbacks
+                // below API 34. Events are sent on-demand or via polling.
+            }
+
+            override fun onCancel(arguments: Any?) {}
+        })
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -69,7 +92,7 @@ class FlutterNeoShieldPlugin : FlutterPlugin, MethodCallHandler {
                 secureStorage.clear()
                 result.success(null)
             }
-            
+
             // RASP Shield
             "checkDebugger" -> {
                 result.success(debuggerDetector.check())
@@ -101,10 +124,56 @@ class FlutterNeoShieldPlugin : FlutterPlugin, MethodCallHandler {
                     result.success(true)
                 }
             }
+
+            // Screen Shield
+            "enableScreenProtection" -> {
+                result.success(screenProtector.enable(activity))
+            }
+            "disableScreenProtection" -> {
+                result.success(screenProtector.disable(activity))
+            }
+            "isScreenProtectionActive" -> {
+                result.success(screenProtector.isActive(activity))
+            }
+            "enableAppSwitcherGuard" -> {
+                // On Android, FLAG_SECURE already blanks the app switcher thumbnail.
+                // Enabling screen protection implicitly guards the app switcher.
+                val success = screenProtector.enable(activity)
+                appSwitcherGuardEnabled = success
+                result.success(success)
+            }
+            "disableAppSwitcherGuard" -> {
+                // Only disable FLAG_SECURE if screen protection itself isn't active
+                appSwitcherGuardEnabled = false
+                // Don't clear FLAG_SECURE here — it may be set for screen protection.
+                // The app switcher guard is a logical flag on Android.
+                result.success(true)
+            }
+            "isScreenBeingRecorded" -> {
+                result.success(recordingDetector.isRecordingOrMirroring(activity))
+            }
+
             else -> {
                 result.notImplemented()
             }
         }
+    }
+
+    // ActivityAware implementation
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        activity = binding.activity
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        activity = null
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        activity = binding.activity
+    }
+
+    override fun onDetachedFromActivity() {
+        activity = null
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
@@ -115,5 +184,7 @@ class FlutterNeoShieldPlugin : FlutterPlugin, MethodCallHandler {
         secureStorage.clear()
         channel.setMethodCallHandler(null)
         raspChannel.setMethodCallHandler(null)
+        screenChannel.setMethodCallHandler(null)
+        screenEventChannel?.setStreamHandler(null)
     }
 }

@@ -10,6 +10,8 @@ import 'log_shield/log_shield.dart';
 import 'log_shield/log_shield_config.dart';
 import 'memory_shield/memory_shield.dart';
 import 'memory_shield/memory_shield_config.dart';
+import 'screen_shield/screen_shield.dart';
+import 'screen_shield/screen_shield_config.dart';
 import 'string_shield/string_shield.dart';
 import 'string_shield/string_shield_config.dart';
 
@@ -76,6 +78,7 @@ class FlutterNeoShield {
     ClipboardShieldConfig? clipboardConfig,
     MemoryShieldConfig? memoryConfig,
     StringShieldConfig? stringShieldConfig,
+    ScreenShieldConfig? screenConfig,
   }) {
     final shieldConfig = config ?? const ShieldConfig();
 
@@ -95,6 +98,10 @@ class FlutterNeoShield {
 
     if (stringShieldConfig != null) {
       StringShield().init(stringShieldConfig);
+    }
+
+    if (screenConfig != null) {
+      ScreenShield().init(screenConfig);
     }
 
     _initialized = true;
@@ -151,6 +158,16 @@ class FlutterNeoShield {
     return StringShield();
   }
 
+  /// Access the ScreenShield module.
+  ///
+  /// ```dart
+  /// await FlutterNeoShield.screen.enableProtection();
+  /// ```
+  static ScreenShield get screen {
+    _warnIfNotInitialized();
+    return ScreenShield();
+  }
+
   /// Access the detection report, or null if reporting is disabled.
   ///
   /// ```dart
@@ -171,6 +188,8 @@ class FlutterNeoShield {
     ClipboardShield().reset();
     MemoryShield().reset();
     StringShield().reset();
+    // ignore: invalid_use_of_visible_for_testing_member
+    ScreenShield().reset();
     _initialized = false;
     _warnedAboutInit = false;
   }

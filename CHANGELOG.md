@@ -1,3 +1,26 @@
+## 0.6.0
+
+### New Module: Screen Shield — Anti-Screenshot & Screen Recording Prevention
+
+* **New module:** `ScreenShield` prevents screenshots, screen recording, screen mirroring, and app-switcher thumbnails from capturing sensitive app content.
+* **Android:** Uses `FLAG_SECURE` on the Activity window — the OS renders a black screen for all capture methods (screenshots, screen recording, Chromecast, MediaProjection, `adb screencap`, and app switcher thumbnails). Works on all Android versions (API 21+).
+* **iOS:** Uses the secure `UITextField` layer trick — content rendered through the secure layer is blanked during capture. Screenshot detection via `userDidTakeScreenshotNotification`. Screen recording detection via `UIScreen.isCaptured`. App switcher guard via blur overlay on `willResignActive`.
+* **New Dart classes:**
+  * `ScreenShield` — Singleton with `enableProtection()`, `disableProtection()`, `enableAppSwitcherGuard()`, `disableAppSwitcherGuard()`, and detection streams.
+  * `ScreenShieldConfig` — Immutable configuration with `copyWith()`.
+  * `ScreenShieldScope` — Widget that enables protection on mount and disables on dispose (per-screen control).
+  * `ScreenshotEvent` / `RecordingStateEvent` — Event models for detection callbacks.
+  * `ScreenChannel` — Platform channel layer with graceful fallback on unsupported platforms.
+* **New native classes:**
+  * Android: `ScreenProtector.kt` (FLAG_SECURE), `ScreenRecordingDetector.kt` (virtual display heuristic).
+  * iOS: `ScreenProtector.swift` (secure text field layer), `ScreenshotDetector.swift`, `ScreenRecordingDetector.swift` (`UIScreen.isCaptured`), `AppSwitcherGuard.swift` (blur overlay).
+* **Plugin upgrade:** Android plugin now implements `ActivityAware` for Activity access. iOS plugin now implements `FlutterStreamHandler` for real-time event streaming via `EventChannel`.
+* **Integration:** Added `screenConfig` parameter to `FlutterNeoShield.init()` and `FlutterNeoShield.screen` convenience getter. Zero breaking changes to existing APIs.
+* **Tests:** 27 new tests (333 total, up from 306). New suites: `screen_shield_test`, `screen_channel_test`, `screen_shield_widget_test`.
+* **Example:** New `ScreenShieldDemo` screen with interactive toggle controls, recording status indicator, and event log.
+
+---
+
 ## 0.5.2
 
 * Fixed an issue with `.pubignore` that incorrectly excluded `dio_shield_interceptor.dart`. This caused static analysis failures on pub.dev, which in turn prevented pub.dev from detecting support for all 6 platforms (iOS, Android, Web, Windows, macOS, Linux). The package now correctly reports full platform support.

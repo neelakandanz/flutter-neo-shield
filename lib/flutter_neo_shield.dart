@@ -54,6 +54,12 @@ export 'src/rasp/rasp_shield.dart';
 export 'src/rasp/security_mode.dart';
 export 'src/rasp/security_result.dart';
 
+// Screen Shield
+export 'src/screen_shield/screen_shield.dart';
+export 'src/screen_shield/screen_shield_callback.dart';
+export 'src/screen_shield/screen_shield_config.dart';
+export 'src/screen_shield/screen_shield_widget.dart';
+
 // Main
 export 'src/flutter_neo_shield.dart';
 
