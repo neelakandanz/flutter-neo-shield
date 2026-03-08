@@ -307,9 +307,11 @@ It uses OS-level APIs to make your app's content **invisible to all capture meth
 
 ---
 
-### See Screen Shield in Action
+### 🎬 See Screen Shield in Action
 
-<video src="video/flutter_neo_screen-shield.mp4" width="100%" height="auto" controls loop muted autoplay></video>
+[![Watch Screen Shield Demo](https://img.shields.io/badge/▶_Watch_Demo-Screen_Shield_in_Action-red?style=for-the-badge&logo=github&logoColor=white)](https://github.com/neelakandanz/flutter-neo-shield/blob/main/video/flutter_neo_screen-shield.mp4)
+
+> Click the button above to watch how Screen Shield blocks screenshots and screen recording on Android and iOS.
 
 ---
 
