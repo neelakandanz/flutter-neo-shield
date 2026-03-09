@@ -251,7 +251,7 @@ It detects these hostile environments so you can restrict features, clear sensit
 
 > **Fail-closed by default:** If native RASP plugins aren't registered (e.g., running on web/desktop), all checks report threats as detected. Use `RaspChannel.configure(failClosed: false)` during development to change this.
 
-![RASP Security Report in Action](https://raw.githubusercontent.com/neelakandanz/flutter-neo-shield/master/screenshots/rasp_report.png)
+![RASP Security Report in Action](https://raw.githubusercontent.com/neelakandanz/flutter-neo-shield/master/screenshots/rasp_report_v2.png)
 
 ```dart
 import 'package:flutter_neo_shield/rasp_shield.dart';
